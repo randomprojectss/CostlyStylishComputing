@@ -116,9 +116,19 @@ def admin_required():
         return is_admin(ctx)
     return commands.check(predicate)
 
+def initialize_files():
+    """Initialize all required JSON files with default structures."""
+    initialize_file(KEYS_FILE, {})
+    initialize_file(USERS_FILE, {})
+    initialize_file(HWIDS_FILE, {})
+    initialize_file(COOLDOWNS_FILE, {})
+    initialize_file(USED_KEYS_FILE, [])
+
 @bot.event
 async def on_ready():
     print(f'Logged on as {bot.user}!')
+    # Initialize files on bot startup
+    initialize_files()
     # Start auto_commit in a separate thread
     threading.Thread(target=run_auto_commit, daemon=True).start()
 
@@ -246,11 +256,43 @@ async def resethwid(ctx):
 
 @bot.command()
 @buyer_required()
-async def redeem(ctx, key: str):
+async def check(ctx, *, key):
+    keys = load_json(KEYS_FILE)
+    hwids = load_json(HWIDS_FILE)
+
+    if key in keys:
+        if keys[key]['status'] == 'not redeemed':
+            await ctx.send(f'{ctx.author.mention}, this key is valid and not redeemed.')
+        elif keys[key]['status'] == 'redeemed':
+            if keys[key]['hwid'] == hwids.get(ctx.author.id):
+                await ctx.send(f'{ctx.author.mention}, this key is already redeemed and your HWID matches.')
+            else:
+                await ctx.send(f'{ctx.author.mention}, this key is already redeemed by another user.')
+        else:
+            await ctx.send(f'{ctx.author.mention}, this key is invalid or has already been redeemed.')
+    else:
+        await ctx.send(f'{ctx.author.mention}, the key is invalid or has already been redeemed.')
+
+@bot.command()
+@admin_required()
+async def addkey(ctx, num_keys: int):
+    if num_keys <= 0:
+        await ctx.send('Please enter a positive number of keys to generate.')
+        return
+
+    new_keys = generate_keys(num_keys)
+    keys = load_json(KEYS_FILE)
+    keys.update(new_keys)
+    save_json(KEYS_FILE, keys)
+    await ctx.send(f'Generated {num_keys} new keys and added them to the file.')
+
+@bot.command()
+@buyer_required()
+async def redeem(ctx, *, key):
     user_id = str(ctx.author.id)
 
     if redeem_key_without_hwid(key, user_id):
-        await ctx.send(f'Thank you {ctx.author.mention}, you have redeemed the key successfully!')
+        await ctx.send(f'{ctx.author.mention}, you have redeemed the key successfully!')
     else:
         await ctx.send(f'{ctx.author.mention}, the key is invalid or has already been redeemed.')
 
