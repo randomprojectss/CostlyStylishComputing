@@ -8,5 +8,8 @@
         "status": "redeemed",
         "redeemed_by": "@645601772047695893",
         "hwid": "83DB047C-6AB6-4706-A64C-0F47208CEF92"
+    },
+    "54414336041": {
+        "status": "not redeemed"
     }
 }
