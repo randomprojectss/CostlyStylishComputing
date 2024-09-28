@@ -264,25 +264,44 @@ async def resetcooldown(ctx, member: discord.Member):
     if user_id in cooldowns:
         del cooldowns[user_id]
         save_json(COOLDOWNS_FILE, cooldowns)
-        await ctx.send(f'{member.mention} cooldown has been reset.')
+        await ctx.send(f'{member.mention}\'s cooldown has been reset.')
     else:
-        await ctx.send(f'{member.mention} has no active cooldown.')
+        await ctx.send(f'{member.mention} has no active cooldown to reset.')
 
 @bot.command()
 @admin_required()
-async def generate(ctx, num_keys: int):
+async def generatekeys(ctx, num_keys: int):
+    if num_keys < 1:
+        await ctx.send("Please provide a valid number of keys to generate.")
+        return
+
     keys = load_json(KEYS_FILE)
+
     new_keys = generate_keys(num_keys)
+
     keys.update(new_keys)
+
     save_json(KEYS_FILE, keys)
 
-    await ctx.send(f'Generated {num_keys} new keys.')
+    for key in new_keys.keys():
+        await ctx.author.send(f"Generated key: {key}")
 
-# Initialize all required files with default values
+    await ctx.send(f"{num_keys} new keys have been generated and added.")
+
+@bot.command()
+@admin_required()
+async def dumpkeys(ctx):
+    keys = load_json(KEYS_FILE)
+    message = "\n".join([f"{key}: {value}" for key, value in keys.items()])
+    await ctx.author.send(f"Here are the current keys:\n{message}")
+
+# Initialize JSON files with default values
 initialize_file(KEYS_FILE, {})
 initialize_file(USERS_FILE, {})
 initialize_file(HWIDS_FILE, {})
 initialize_file(COOLDOWNS_FILE, {})
 initialize_file(USED_KEYS_FILE, [])
 
-bot.run(os.getenv('DISCORD_TOKEN'))
+# Run the bot with your secret token
+if __name__ == "__main__":
+    bot.run(os.environ['DISCORD_BOT_KEY'])
